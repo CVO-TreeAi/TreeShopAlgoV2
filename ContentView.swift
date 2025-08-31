@@ -3,108 +3,172 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var pricingModel = PricingModel()
     @State private var showingSettings = false
+    @State private var showDetailedBreakdown = false
     
     var body: some View {
-        NavigationView {
+        GeometryReader { geometry in
             ZStack {
-                // Pure black background
-                Color.black.ignoresSafeArea()
+                // Dynamic gradient background
+                backgroundGradient
                 
-                VStack(spacing: 0) {
-                    // Header
-                    headerView
-                    
-                    ScrollView {
-                        VStack(spacing: 25) {
-                            // Input Section
-                            inputSection
-                            
-                            // Results Section
-                            resultsSection
+                ScrollView(showsIndicators: false) {
+                    LazyVStack(spacing: 0) {
+                        // Compact floating header
+                        floatingHeader
+                        
+                        // Main content with glassmorphism cards
+                        VStack(spacing: 20) {
+                            inputCard
+                            resultsCard
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 20)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 30)
                     }
                 }
+                .onTapGesture {
+                    // Dismiss keyboard when tapping outside
+                    hideKeyboard()
+                }
             }
-            .navigationBarHidden(true)
         }
+        .ignoresSafeArea(.container, edges: .top)
         .sheet(isPresented: $showingSettings) {
             SettingsView(pricingModel: pricingModel)
         }
     }
     
-    // MARK: - Header View
-    private var headerView: some View {
+    // MARK: - Modern UI Components
+    private var backgroundGradient: some View {
         ZStack {
+            // Animated gradient background
             LinearGradient(
-                colors: [Color(red: 0.18, green: 0.49, blue: 0.20), Color(red: 0.30, green: 0.69, blue: 0.31)],
+                colors: [
+                    Color.black,
+                    Color(red: 0.05, green: 0.05, blue: 0.1),
+                    Color(red: 0.1, green: 0.15, blue: 0.05),
+                    Color.black
+                ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            .frame(height: 120)
             
-            HStack {
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack {
-                        Image(systemName: "tree.fill")
-                            .foregroundColor(.white)
-                            .font(.title2)
-                        
-                        Text("TreeShop Calculator")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
-                    }
-                }
-                
-                Spacer()
-                
-                Button(action: {
-                    showingSettings = true
-                }) {
-                    Image(systemName: "gearshape.fill")
-                        .foregroundColor(.white)
-                        .font(.title2)
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 40)
+            // Floating orbs for depth
+            Circle()
+                .fill(Color(red: 0.2, green: 0.5, blue: 0.2).opacity(0.1))
+                .frame(width: 200, height: 200)
+                .offset(x: -100, y: -150)
+                .blur(radius: 60)
+            
+            Circle()
+                .fill(Color(red: 0.1, green: 0.7, blue: 0.3).opacity(0.08))
+                .frame(width: 300, height: 300)
+                .offset(x: 150, y: 300)
+                .blur(radius: 80)
         }
     }
     
-    // MARK: - Input Section
-    private var inputSection: some View {
-        VStack(spacing: 20) {
-            inputField(
-                title: "Land Size (Acres)",
-                value: $pricingModel.landSize,
-                placeholder: "Enter acres",
-                formatter: .decimal
-            )
+    private var floatingHeader: some View {
+        HStack {
+            // Compact logo
+            HStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(red: 0.2, green: 0.7, blue: 0.3), Color(red: 0.1, green: 0.5, blue: 0.2)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 32, height: 32)
+                    
+                    Image(systemName: "tree.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+                
+                Text("TreeShop")
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white)
+            }
             
-            packagePicker
+            Spacer()
             
-            projectZipCodeField
-            
-            transportHoursField
-            
-            inputField(
-                title: "Debris Hauling (Yards)",
-                value: $pricingModel.debrisYards,
-                placeholder: "Cubic yards",
-                formatter: .decimal
-            )
+            // Floating settings button
+            Button(action: {
+                showingSettings = true
+                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                impactFeedback.impactOccurred()
+            }) {
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.1))
+                        .frame(width: 40, height: 40)
+                        .background(.ultraThinMaterial, in: Circle())
+                    
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.white)
+                }
+            }
+            .buttonStyle(ScaleButtonStyle())
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(red: 0.15, green: 0.15, blue: 0.15))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
-        )
+        .padding(.horizontal, 20)
+        .padding(.top, 60)
+        .padding(.bottom, 20)
+    }
+    
+    // MARK: - Modern Input Card
+    private var inputCard: some View {
+        VStack(spacing: 24) {
+            // Card header with icon
+            HStack {
+                HStack(spacing: 10) {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color(red: 0.2, green: 0.7, blue: 0.3))
+                    
+                    Text("Project Details")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white)
+                }
+                
+                Spacer()
+            }
+            
+            // Input fields with modern styling
+            VStack(spacing: 16) {
+                // Top row: Land Size + Zip Code
+                HStack(spacing: 12) {
+                    compactInputField(
+                        title: "Land Size",
+                        value: $pricingModel.landSize,
+                        placeholder: "0.0",
+                        suffix: "acres",
+                        icon: "ruler"
+                    )
+                    
+                    compactZipCodeField
+                }
+                
+                // Package selection row
+                modernPackagePicker
+                
+                // Additional debris (if needed)
+                if pricingModel.debrisYards > 0 || !pricingModel.isMaxPackage {
+                    compactInputField(
+                        title: "Additional Debris",
+                        value: $pricingModel.debrisYards,
+                        placeholder: "0",
+                        suffix: "yards",
+                        icon: "cube.box"
+                    )
+                }
+            }
+        }
+        .padding(24)
+        .background(glassMorphismBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
     
     // MARK: - Package Picker
@@ -361,6 +425,341 @@ struct ContentView: View {
                 .foregroundColor(.white)
                 .keyboardType(.decimalPad)
         }
+    }
+    
+    // MARK: - Modern UI Helpers
+    private var glassMorphismBackground: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.ultraThinMaterial)
+            
+            RoundedRectangle(cornerRadius: 20)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.05),
+                            Color.white.opacity(0.02),
+                            Color.black.opacity(0.05)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.2), Color.white.opacity(0.05)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        }
+    }
+    
+    private var resultsCard: some View {
+        VStack(spacing: 20) {
+            // Results header with expand/collapse button
+            HStack {
+                HStack(spacing: 10) {
+                    Image(systemName: "dollarsign.circle.fill")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color(red: 1.0, green: 0.76, blue: 0.03))
+                    
+                    Text("Instant Quote")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white)
+                }
+                
+                Spacer()
+                
+                // Live calculation indicator
+                HStack(spacing: 8) {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color(red: 0.2, green: 0.7, blue: 0.3))
+                            .frame(width: 6, height: 6)
+                        
+                        Text("LIVE")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(Color(red: 0.2, green: 0.7, blue: 0.3))
+                    }
+                    
+                    // Expand/collapse button
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            showDetailedBreakdown.toggle()
+                        }
+                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                        impactFeedback.impactOccurred()
+                    }) {
+                        Image(systemName: showDetailedBreakdown ? "chevron.up.circle.fill" : "chevron.down.circle.fill")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(Color.white.opacity(0.6))
+                    }
+                    .buttonStyle(ScaleButtonStyle())
+                }
+            }
+            
+            VStack(spacing: 16) {
+                // Always visible: Project Total and Deposit
+                VStack(spacing: 12) {
+                    modernResultRow(
+                        label: "Project Total",
+                        value: pricingModel.formatCurrency(pricingModel.finalPrice),
+                        icon: "checkmark.seal.fill",
+                        isTotal: true
+                    )
+                    
+                    // Compact deposit info
+                    HStack {
+                        Image(systemName: "creditcard.fill")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(Color(red: 1.0, green: 0.76, blue: 0.03))
+                            .frame(width: 16)
+                        
+                        Text("Deposit Required (25%)")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(Color.white.opacity(0.8))
+                        
+                        Spacer()
+                        
+                        Text(pricingModel.formatCurrency(pricingModel.depositAmount))
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundColor(Color(red: 1.0, green: 0.76, blue: 0.03))
+                    }
+                }
+                
+                // Expandable detailed breakdown
+                if showDetailedBreakdown {
+                    VStack(spacing: 12) {
+                        Divider()
+                            .background(Color.white.opacity(0.2))
+                        
+                        // Detailed breakdown
+                        VStack(spacing: 10) {
+                            modernResultRow(label: "Package Cost", value: pricingModel.formatCurrency(pricingModel.baseCost), icon: "tree.fill")
+                            modernResultRow(label: "Transport", value: pricingModel.formatCurrency(pricingModel.transportCost), icon: "truck.box")
+                            
+                            if pricingModel.isMaxPackage {
+                                modernResultRow(
+                                    label: "Est. Debris (\(Int(pricingModel.estimatedDebrisYards)) yds)",
+                                    value: pricingModel.formatCurrency(pricingModel.estimatedDebrisYards * pricingModel.debrisRatePerYard),
+                                    icon: "cube.box.fill",
+                                    isHighlighted: true
+                                )
+                                if pricingModel.debrisYards > 0 {
+                                    modernResultRow(
+                                        label: "Additional Debris",
+                                        value: pricingModel.formatCurrency(pricingModel.debrisYards * pricingModel.debrisRatePerYard),
+                                        icon: "plus.circle.fill"
+                                    )
+                                }
+                            } else {
+                                if pricingModel.debrisCost > 0 {
+                                    modernResultRow(label: "Debris Hauling", value: pricingModel.formatCurrency(pricingModel.debrisCost), icon: "cube.box")
+                                }
+                            }
+                        }
+                        
+                        Divider()
+                            .background(Color.white.opacity(0.2))
+                        
+                        // Additional deposit details
+                        HStack {
+                            Text("Balance at Completion")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(Color.white.opacity(0.7))
+                            
+                            Spacer()
+                            
+                            Text(pricingModel.formatCurrency(pricingModel.balanceDue))
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(Color.white.opacity(0.9))
+                        }
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+        }
+        .padding(24)
+        .background(glassMorphismBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+    }
+    
+    
+    // MARK: - Modern Input Components
+    private func modernInputField(title: String, value: Binding<Double>, placeholder: String, suffix: String, icon: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(Color(red: 0.2, green: 0.7, blue: 0.3))
+                .frame(width: 20)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(Color.white.opacity(0.7))
+                
+                HStack {
+                    TextField(placeholder, value: value, formatter: numberFormatter(style: .decimal))
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.white)
+                        .keyboardType(.decimalPad)
+                    
+                    Text(suffix)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(Color.white.opacity(0.5))
+                }
+            }
+            
+            Spacer()
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.white.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
+        )
+    }
+    
+    // MARK: - Compact Input Components (for side-by-side layout)
+    private func compactInputField(title: String, value: Binding<Double>, placeholder: String, suffix: String, icon: String) -> some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(Color(red: 0.2, green: 0.7, blue: 0.3))
+                    .frame(width: 16)
+                
+                Text(title)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(Color.white.opacity(0.7))
+                
+                Spacer()
+            }
+            
+            HStack(spacing: 4) {
+                TextField(placeholder, value: value, formatter: numberFormatter(style: .decimal))
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.white)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.center)
+                
+                Text(suffix)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(Color.white.opacity(0.5))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.white.opacity(0.05))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                    )
+            )
+        }
+        .frame(maxWidth: .infinity)
+    }
+    
+    private var compactZipCodeField: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "location.fill")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(Color(red: 0.2, green: 0.7, blue: 0.3))
+                    .frame(width: 16)
+                
+                Text("Project Zip")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(Color.white.opacity(0.7))
+                
+                Spacer()
+                
+                if pricingModel.isCalculatingDistance {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                        .foregroundColor(Color(red: 0.30, green: 0.69, blue: 0.31))
+                }
+            }
+            
+            HStack {
+                TextField("12345", text: $pricingModel.projectZipCode)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.white)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.center)
+                    .onChange(of: pricingModel.projectZipCode) { newValue in
+                        // Auto-calculate when zip code is 5 digits
+                        if newValue.count == 5 && !pricingModel.baseLocationAddress.isEmpty {
+                            pricingModel.calculateTransportTime(for: newValue)
+                        }
+                    }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.white.opacity(0.05))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                    )
+            )
+        }
+        .frame(maxWidth: .infinity)
+    }
+    
+    private func modernResultRow(label: String, value: String, icon: String, isHighlighted: Bool = false, isTotal: Bool = false) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(isTotal ? Color(red: 0.2, green: 0.7, blue: 0.3) : (isHighlighted ? Color(red: 1.0, green: 0.76, blue: 0.03) : Color.white.opacity(0.6)))
+                .frame(width: 16)
+            
+            Text(label)
+                .font(.system(size: isTotal ? 16 : 14, weight: isTotal ? .semibold : .medium))
+                .foregroundColor(isTotal ? .white : Color.white.opacity(0.8))
+            
+            Spacer()
+            
+            Text(value)
+                .font(.system(size: isTotal ? 18 : 15, weight: isTotal ? .bold : .semibold, design: .rounded))
+                .foregroundColor(isTotal ? Color(red: 0.2, green: 0.7, blue: 0.3) : .white)
+        }
+    }
+    
+    // Add these modern component placeholders for now
+    private var modernPackagePicker: some View {
+        packagePicker // Will update this separately
+    }
+    
+    private var modernZipCodeField: some View {
+        projectZipCodeField // Will update this separately  
+    }
+    
+    private var modernTransportField: some View {
+        transportHoursField // Will update this separately
+    }
+    
+    // MARK: - Custom Button Style
+    struct ScaleButtonStyle: ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+                .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
+        }
+    }
+    
+    // MARK: - Keyboard Dismissal
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
     
     // MARK: - Number Formatter

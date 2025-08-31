@@ -50,14 +50,25 @@ class PricingModel: ObservableObject {
     
     // MARK: - Pricing Rates (Adjustable in Settings)  
     @Published var packageRates: [PackageType: Double] = [
-        .small: 2125.0,
-        .medium: 2500.0,
-        .large: 3375.0,
-        .xlarge: 4250.0,
+        .small: 2125.0,      // Will be auto-calculated from medium
+        .medium: 2500.0,     // BASE RATE - 6" DBH default
+        .large: 3375.0,      // Will be auto-calculated from medium
+        .xlarge: 4250.0,     // Will be auto-calculated from medium
         .maxLight: 8000.0,   // 10" and under (most projects) - ~4 days @ $2000/day
         .maxMedium: 12000.0, // Up to 15" trees - 3-4 days @ $2000/day + complexity
         .maxHeavy: 18000.0   // 15"+ trees - 7+ days @ $2000/day + equipment wear
     ]
+    
+    // Auto-adjustment multipliers
+    private let packageMultipliers: [PackageType: Double] = [
+        .small: 0.85,   // -15% of medium
+        .medium: 1.0,   // Base rate (100%)
+        .large: 1.35,   // +35% of medium  
+        .xlarge: 1.70   // +70% of medium
+    ]
+    
+    // Track which rates are manually overridden
+    @Published var manuallyOverriddenRates: Set<PackageType> = []
     
     @Published var transportRatePerHour: Double = 150.0
     @Published var debrisRatePerYard: Double = 20.0  // Updated to $20/yard
@@ -124,6 +135,8 @@ class PricingModel: ObservableObject {
     
     init() {
         loadSettings()
+        // Auto-calculate dependent rates on initialization
+        updateDependentRates(basedOn: .medium, newRate: packageRates[.medium] ?? 2500.0)
     }
     
     // MARK: - Settings Persistence
@@ -143,6 +156,10 @@ class PricingModel: ObservableObject {
         userDefaults.set(baseLocationAddress, forKey: "baseLocationAddress")
         userDefaults.set(businessPhone, forKey: "businessPhone")
         userDefaults.set(businessEmail, forKey: "businessEmail")
+        
+        // Save manually overridden rates
+        let overriddenArray = Array(manuallyOverriddenRates.map { $0.rawValue })
+        userDefaults.set(overriddenArray, forKey: "manuallyOverriddenRates")
     }
     
     private func loadSettings() {
@@ -165,6 +182,44 @@ class PricingModel: ObservableObject {
         baseLocationAddress = userDefaults.string(forKey: "baseLocationAddress") ?? ""
         businessPhone = userDefaults.string(forKey: "businessPhone") ?? ""
         businessEmail = userDefaults.string(forKey: "businessEmail") ?? ""
+        
+        // Load manually overridden rates
+        if let overriddenArray = userDefaults.array(forKey: "manuallyOverriddenRates") as? [String] {
+            manuallyOverriddenRates = Set(overriddenArray.compactMap { PackageType(rawValue: $0) })
+        }
+    }
+    
+    // MARK: - Dynamic Pricing Logic
+    func updateDependentRates(basedOn basePackage: PackageType, newRate: Double) {
+        guard basePackage == .medium else { return } // Only medium drives other rates
+        
+        let mediumRate = newRate
+        packageRates[.medium] = mediumRate
+        
+        // Update dependent rates only if they haven't been manually overridden
+        for (packageType, multiplier) in packageMultipliers {
+            if packageType != .medium && !manuallyOverriddenRates.contains(packageType) {
+                packageRates[packageType] = mediumRate * multiplier
+            }
+        }
+    }
+    
+    func markAsManuallyOverridden(_ packageType: PackageType) {
+        manuallyOverriddenRates.insert(packageType)
+    }
+    
+    func resetToAutoCalculated(_ packageType: PackageType) {
+        guard packageType != .medium else { return }
+        manuallyOverriddenRates.remove(packageType)
+        
+        // Recalculate based on current medium rate
+        if let multiplier = packageMultipliers[packageType] {
+            packageRates[packageType] = (packageRates[.medium] ?? 2500.0) * multiplier
+        }
+    }
+    
+    func isRateManuallyOverridden(_ packageType: PackageType) -> Bool {
+        return manuallyOverriddenRates.contains(packageType)
     }
     
     // MARK: - Transport Calculation

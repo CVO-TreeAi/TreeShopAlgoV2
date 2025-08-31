@@ -32,6 +32,10 @@ struct SettingsView: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
                 }
+                .onTapGesture {
+                    // Dismiss keyboard when tapping outside
+                    hideKeyboard()
+                }
             }
             .navigationTitle("Pricing Settings")
             .navigationBarTitleDisplayMode(.large)
@@ -91,14 +95,7 @@ struct SettingsView: View {
             
             VStack(spacing: 12) {
                 ForEach(PackageType.allCases, id: \.self) { package in
-                    settingsRow(
-                        title: package.displayName,
-                        value: Binding(
-                            get: { pricingModel.packageRates[package] ?? 0 },
-                            set: { pricingModel.packageRates[package] = $0 }
-                        ),
-                        isCurrency: true
-                    )
+                    dynamicPricingRow(for: package)
                 }
             }
         }
@@ -384,6 +381,95 @@ struct SettingsView: View {
         }
         
         return components.joined(separator: " ")
+    }
+    
+    // MARK: - Dynamic Pricing Row
+    private func dynamicPricingRow(for package: PackageType) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(package.displayName)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(Color(red: 0.8, green: 0.8, blue: 0.8))
+                
+                Spacer()
+                
+                // Show status badges
+                if package == .medium {
+                    Text("BASE RATE")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(Color(red: 0.30, green: 0.69, blue: 0.31))
+                } else if pricingModel.isRateManuallyOverridden(package) {
+                    HStack(spacing: 4) {
+                        Text("CUSTOM")
+                            .font(.caption)
+                            .foregroundColor(Color(red: 1.0, green: 0.3, blue: 0.3))
+                        
+                        Button(action: {
+                            pricingModel.resetToAutoCalculated(package)
+                        }) {
+                            Image(systemName: "arrow.counterclockwise")
+                                .font(.caption)
+                                .foregroundColor(Color(red: 0.6, green: 0.6, blue: 0.6))
+                        }
+                    }
+                }
+            }
+            
+            HStack {
+                Text("$")
+                    .foregroundColor(Color(red: 0.6, green: 0.6, blue: 0.6))
+                    .font(.body)
+                
+                TextField("0", value: Binding(
+                    get: { pricingModel.packageRates[package] ?? 0 },
+                    set: { newValue in
+                        if package == .medium {
+                            // Update medium rate and trigger auto-calculation
+                            pricingModel.updateDependentRates(basedOn: .medium, newRate: newValue)
+                        } else {
+                            // Mark as manually overridden and set custom rate
+                            pricingModel.packageRates[package] = newValue
+                            pricingModel.markAsManuallyOverridden(package)
+                        }
+                    }
+                ), formatter: numberFormatter(isCurrency: false))
+                .keyboardType(.decimalPad)
+                .foregroundColor(.white)
+                .font(.body)
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(red: 0.24, green: 0.24, blue: 0.24))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(getBorderColor(for: package), lineWidth: 2)
+                    )
+            )
+        }
+    }
+    
+    // MARK: - Helper Functions
+    private func getPricingRelationship(for package: PackageType) -> String {
+        // Don't show percentage relationships anymore, keep it clean
+        return ""
+    }
+    
+    private func getBorderColor(for package: PackageType) -> Color {
+        if package == .medium {
+            return Color(red: 0.30, green: 0.69, blue: 0.31).opacity(0.5) // Green for base rate
+        } else if pricingModel.isRateManuallyOverridden(package) {
+            return Color(red: 1.0, green: 0.3, blue: 0.3).opacity(0.5) // Red for custom
+        } else {
+            return Color(red: 1.0, green: 0.76, blue: 0.03).opacity(0.3) // Gold for auto-calculated
+        }
+    }
+    
+    // MARK: - Keyboard Dismissal
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
     
     // MARK: - Number Formatter
