@@ -4,8 +4,7 @@ import SwiftUI
 struct TreeShopCalculatorApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .preferredColorScheme(.dark)
+            MainTabView()
         }
     }
 }

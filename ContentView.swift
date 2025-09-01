@@ -2,8 +2,13 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var pricingModel = PricingModel()
+    @EnvironmentObject var customerManager: CustomerManager
     @State private var showingSettings = false
     @State private var showDetailedBreakdown = false
+    @State private var showingCustomers = false
+    @State private var selectedCustomer: Customer? = nil
+    @State private var showingSaveQuote = false
+    @State private var showingNewCustomer = false
     
     var body: some View {
         GeometryReader { geometry in
@@ -18,6 +23,7 @@ struct ContentView: View {
                         
                         // Main content with glassmorphism cards
                         VStack(spacing: 20) {
+                            customerSelectionCard
                             inputCard
                             resultsCard
                         }
@@ -34,6 +40,33 @@ struct ContentView: View {
         .ignoresSafeArea(.container, edges: .top)
         .sheet(isPresented: $showingSettings) {
             SettingsView(pricingModel: pricingModel)
+        }
+        .sheet(isPresented: $showingCustomers) {
+            CustomerListView(onCustomerSelected: { customer in
+                selectedCustomer = customer
+                // If we have a valid quote, create a project for this customer
+                if pricingModel.landSize > 0 && pricingModel.finalPrice > 0 {
+                    customerManager.createProjectFromQuote(customer.id, pricingModel: pricingModel, projectName: "Tree Service Quote")
+                }
+            })
+        }
+        .actionSheet(isPresented: $showingSaveQuote) {
+            ActionSheet(
+                title: Text("Save Quote"),
+                message: Text("Would you like to save this quote to a customer?"),
+                buttons: [
+                    .default(Text("Select Existing Customer")) {
+                        showingCustomers = true
+                    },
+                    .default(Text("Create New Customer")) {
+                        createNewCustomerWithQuote()
+                    },
+                    .cancel()
+                ]
+            )
+        }
+        .sheet(isPresented: $showingNewCustomer) {
+            AddEditCustomerView(customerManager: customerManager, pricingModel: pricingModel)
         }
     }
     
@@ -93,6 +126,25 @@ struct ContentView: View {
             }
             
             Spacer()
+            
+            // Customer management button
+            Button(action: {
+                showingCustomers = true
+                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                impactFeedback.impactOccurred()
+            }) {
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.1))
+                        .frame(width: 40, height: 40)
+                        .background(.ultraThinMaterial, in: Circle())
+                    
+                    Image(systemName: "person.2.fill")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.white)
+                }
+            }
+            .buttonStyle(ScaleButtonStyle())
             
             // Floating settings button
             Button(action: {
@@ -735,6 +787,137 @@ struct ContentView: View {
         }
     }
     
+    // MARK: - Customer Selection Card
+    private var customerSelectionCard: some View {
+        VStack(spacing: 16) {
+            HStack {
+                HStack(spacing: 10) {
+                    Image(systemName: "person.2.fill")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color(red: 0.2, green: 0.7, blue: 0.3))
+                    
+                    Text("Customer")
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white)
+                }
+                
+                Spacer()
+                
+                // Save quote button (only show if we have valid inputs)
+                if pricingModel.landSize > 0 && pricingModel.finalPrice > 0 {
+                    Button(action: {
+                        showingSaveQuote = true
+                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                        impactFeedback.impactOccurred()
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "square.and.arrow.down")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(Color(red: 1.0, green: 0.76, blue: 0.03))
+                            
+                            Text("Save")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(Color(red: 1.0, green: 0.76, blue: 0.03))
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color(red: 1.0, green: 0.76, blue: 0.03).opacity(0.1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(Color(red: 1.0, green: 0.76, blue: 0.03).opacity(0.3), lineWidth: 1)
+                                )
+                        )
+                    }
+                    .buttonStyle(ScaleButtonStyle())
+                }
+            }
+            
+            if let customer = selectedCustomer {
+                // Selected customer display
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(Color(red: 0.2, green: 0.7, blue: 0.3))
+                            .frame(width: 40, height: 40)
+                        
+                        Text(getInitials(customer.fullName))
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(customer.fullName.isEmpty ? "No Name" : customer.fullName)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                        
+                        if !customer.email.isEmpty {
+                            Text(customer.email)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(Color.white.opacity(0.7))
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        selectedCustomer = nil
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(Color.white.opacity(0.6))
+                    }
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(red: 0.2, green: 0.7, blue: 0.3).opacity(0.1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color(red: 0.2, green: 0.7, blue: 0.3).opacity(0.3), lineWidth: 1)
+                        )
+                )
+            } else {
+                // No customer selected state
+                Button(action: {
+                    showingCustomers = true
+                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                    impactFeedback.impactOccurred()
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(Color(red: 0.2, green: 0.7, blue: 0.3))
+                        
+                        Text("Select or Add Customer")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white)
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(Color.white.opacity(0.4))
+                    }
+                    .padding(16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.white.opacity(0.03))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                            )
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+        .padding(24)
+        .background(glassMorphismBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+    }
+
     // Add these modern component placeholders for now
     private var modernPackagePicker: some View {
         packagePicker // Will update this separately
@@ -746,6 +929,21 @@ struct ContentView: View {
     
     private var modernTransportField: some View {
         transportHoursField // Will update this separately
+    }
+    
+    // MARK: - Helper Functions
+    private func getInitials(_ name: String) -> String {
+        let components = name.components(separatedBy: " ")
+        if components.count >= 2 {
+            return "\(components[0].prefix(1))\(components[1].prefix(1))".uppercased()
+        } else if let first = components.first, !first.isEmpty {
+            return String(first.prefix(2)).uppercased()
+        }
+        return "??"
+    }
+    
+    private func createNewCustomerWithQuote() {
+        showingNewCustomer = true
     }
     
     // MARK: - Custom Button Style
@@ -774,5 +972,6 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+        .environmentObject(CustomerManager())
         .preferredColorScheme(.dark)
 }
