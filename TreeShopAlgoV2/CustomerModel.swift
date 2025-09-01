@@ -3,7 +3,7 @@ import SwiftUI
 
 // MARK: - Customer Data Model
 struct Customer: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     var firstName: String = ""
     var lastName: String = ""
     var email: String = ""
@@ -45,7 +45,7 @@ struct Customer: Identifiable, Codable {
 
 // MARK: - Customer Project
 struct CustomerProject: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     var projectName: String = ""
     var landSize: Double = 0.0
     var packageType: PackageType = .medium
@@ -251,8 +251,6 @@ class CustomerManager: ObservableObject {
                 state: "OR",
                 zipCode: "97205",
                 notes: "Has large property with many mature trees",
-                customerType: .residential,
-                referralSource: "Google Search",
                 projects: [
                     CustomerProject(
                         projectName: "Backyard Tree Removal",
@@ -265,7 +263,9 @@ class CustomerManager: ObservableObject {
                         dateCreated: Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date(),
                         completedDate: Calendar.current.date(byAdding: .day, value: -5, to: Date()) ?? Date()
                     )
-                ]
+                ],
+                customerType: .residential,
+                referralSource: "Google Search"
             ),
             Customer(
                 firstName: "Sarah",

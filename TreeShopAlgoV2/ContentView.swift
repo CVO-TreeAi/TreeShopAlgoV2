@@ -44,6 +44,11 @@ struct ContentView: View {
         .sheet(isPresented: $showingCustomers) {
             CustomerListView(onCustomerSelected: { customer in
                 selectedCustomer = customer
+                // Auto-populate zip code from customer
+                if !customer.zipCode.isEmpty && pricingModel.projectZipCode.isEmpty {
+                    pricingModel.projectZipCode = customer.zipCode
+                    pricingModel.calculateTransportTime(for: customer.zipCode)
+                }
                 // If we have a valid quote, create a project for this customer
                 if pricingModel.landSize > 0 && pricingModel.finalPrice > 0 {
                     customerManager.createProjectFromQuote(customer.id, pricingModel: pricingModel, projectName: "Tree Service Quote")
@@ -803,19 +808,27 @@ struct ContentView: View {
                 
                 Spacer()
                 
-                // Save quote button (only show if we have valid inputs)
+                // Save quote button - different text based on customer selection
                 if pricingModel.landSize > 0 && pricingModel.finalPrice > 0 {
                     Button(action: {
-                        showingSaveQuote = true
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                        impactFeedback.impactOccurred()
+                        if let customer = selectedCustomer {
+                            // Save directly to selected customer
+                            customerManager.createProjectFromQuote(customer.id, pricingModel: pricingModel, projectName: "Tree Service Quote")
+                            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                            impactFeedback.impactOccurred()
+                        } else {
+                            // Show customer selection dialog
+                            showingSaveQuote = true
+                            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                            impactFeedback.impactOccurred()
+                        }
                     }) {
                         HStack(spacing: 6) {
-                            Image(systemName: "square.and.arrow.down")
+                            Image(systemName: selectedCustomer != nil ? "plus.circle.fill" : "square.and.arrow.down")
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(Color(red: 1.0, green: 0.76, blue: 0.03))
                             
-                            Text("Save")
+                            Text(selectedCustomer != nil ? "Add Quote" : "Save")
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(Color(red: 1.0, green: 0.76, blue: 0.03))
                         }

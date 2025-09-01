@@ -4,7 +4,7 @@ import MapKit
 import CoreLocation
 
 // MARK: - Package Types
-enum PackageType: String, CaseIterable, Identifiable {
+enum PackageType: String, CaseIterable, Identifiable, Codable {
     case small = "small"
     case medium = "medium"
     case large = "large"

@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct CustomerDetailView: View {
     let customer: Customer
@@ -39,18 +42,19 @@ struct CustomerDetailView: View {
                 }
             }
             .navigationTitle("Customer Details")
-            .navigationBarTitleDisplayMode(.large)
-            .navigationBarItems(
-                leading: Button("Close") {
-                    presentationMode.wrappedValue.dismiss()
-                },
-                trailing: HStack {
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Close") {
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Edit") {
                         showingEditCustomer = true
                     }
                     .foregroundColor(Color(red: 0.30, green: 0.69, blue: 0.31))
                 }
-            )
+            }
         }
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showingEditCustomer) {
@@ -171,7 +175,9 @@ struct CustomerDetailView: View {
                     if !customer.phone.isEmpty {
                         Button(action: {
                             if let phoneURL = URL(string: "tel:\(customer.phone.replacingOccurrences(of: " ", with: ""))") {
+#if canImport(UIKit)
                                 UIApplication.shared.open(phoneURL)
+#endif
                             }
                         }) {
                             Image(systemName: "phone.fill")
@@ -185,7 +191,9 @@ struct CustomerDetailView: View {
                     if !customer.email.isEmpty {
                         Button(action: {
                             if let emailURL = URL(string: "mailto:\(customer.email)") {
+#if canImport(UIKit)
                                 UIApplication.shared.open(emailURL)
+#endif
                             }
                         }) {
                             Image(systemName: "envelope.fill")
@@ -362,8 +370,10 @@ struct CustomerDetailView: View {
     private func projectRow(_ project: CustomerProject) -> some View {
         Button(action: {
             selectedProject = project
+#if canImport(UIKit)
             let impactFeedback = UIImpactFeedbackGenerator(style: .light)
             impactFeedback.impactOccurred()
+#endif
         }) {
             HStack(spacing: 12) {
                 // Status indicator
@@ -487,7 +497,9 @@ struct CustomerDetailView: View {
     }
     
     private func hideKeyboard() {
+#if canImport(UIKit)
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+#endif
     }
 }
 
@@ -518,13 +530,14 @@ struct ProjectDetailView: View {
                 }
             }
             .navigationTitle("Project Details")
-            .navigationBarTitleDisplayMode(.large)
-            .navigationBarItems(
-                trailing: Button("Close") {
-                    presentationMode.wrappedValue.dismiss()
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Close") {
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                    .foregroundColor(Color(red: 0.30, green: 0.69, blue: 0.31))
                 }
-                .foregroundColor(Color(red: 0.30, green: 0.69, blue: 0.31))
-            )
+            }
         }
         .preferredColorScheme(.dark)
     }
@@ -582,7 +595,7 @@ struct ProjectDetailView: View {
             }
             
             VStack(spacing: 12) {
-                detailRow(title: "Land Size", value: "\(project.landSize, specifier: "%.1f") acres")
+                detailRow(title: "Land Size", value: String(format: "%.1f acres", project.landSize))
                 detailRow(title: "Package Type", value: project.packageType.displayName)
                 if !project.projectZipCode.isEmpty {
                     detailRow(title: "Project Location", value: project.projectZipCode)
