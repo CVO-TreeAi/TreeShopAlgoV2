@@ -9,6 +9,7 @@ struct ContentView: View {
     @State private var selectedCustomer: Customer? = nil
     @State private var showingSaveQuote = false
     @State private var showingNewCustomer = false
+    @State private var showingQuoteSavedAlert = false
     
     var body: some View {
         GeometryReader { geometry in
@@ -72,6 +73,13 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showingNewCustomer) {
             AddEditCustomerView(customerManager: customerManager, pricingModel: pricingModel)
+        }
+        .alert(isPresented: $showingQuoteSavedAlert) {
+            Alert(
+                title: Text("Quote Saved!"),
+                message: Text("The quote has been added to \(selectedCustomer?.fullName ?? "the customer")'s projects."),
+                dismissButton: .default(Text("OK"))
+            )
         }
     }
     
@@ -414,7 +422,7 @@ struct ContentView: View {
             HStack {
                 TextField("Enter project zip code", text: $pricingModel.projectZipCode)
                     .keyboardType(.numberPad)
-                    .onChange(of: pricingModel.projectZipCode) { newValue in
+                    .onChange(of: pricingModel.projectZipCode) { oldValue, newValue in
                         // Auto-calculate when zip code is 5 digits
                         if newValue.count == 5 && !pricingModel.baseLocationAddress.isEmpty {
                             pricingModel.calculateTransportTime(for: newValue)
@@ -752,7 +760,7 @@ struct ContentView: View {
                     .foregroundColor(.white)
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.center)
-                    .onChange(of: pricingModel.projectZipCode) { newValue in
+                    .onChange(of: pricingModel.projectZipCode) { oldValue, newValue in
                         // Auto-calculate when zip code is 5 digits
                         if newValue.count == 5 && !pricingModel.baseLocationAddress.isEmpty {
                             pricingModel.calculateTransportTime(for: newValue)
@@ -814,6 +822,9 @@ struct ContentView: View {
                         if let customer = selectedCustomer {
                             // Save directly to selected customer
                             customerManager.createProjectFromQuote(customer.id, pricingModel: pricingModel, projectName: "Tree Service Quote")
+                            showingQuoteSavedAlert = true
+                            // Clear pricing fields for next quote
+                            clearPricingFields()
                             let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
                             impactFeedback.impactOccurred()
                         } else {
@@ -957,6 +968,14 @@ struct ContentView: View {
     
     private func createNewCustomerWithQuote() {
         showingNewCustomer = true
+    }
+    
+    private func clearPricingFields() {
+        pricingModel.landSize = 0.0
+        pricingModel.projectZipCode = ""
+        pricingModel.transportHours = 0.0
+        pricingModel.debrisYards = 0.0
+        pricingModel.selectedPackage = .medium
     }
     
     // MARK: - Custom Button Style

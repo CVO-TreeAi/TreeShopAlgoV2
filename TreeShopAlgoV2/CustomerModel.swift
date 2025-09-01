@@ -223,9 +223,13 @@ class CustomerManager: ObservableObject {
         addProjectToCustomer(customerId, project: project)
     }
     
-    private func saveCustomers() {
-        if let encoded = try? JSONEncoder().encode(customers) {
-            userDefaults.set(encoded, forKey: customersKey)
+    func saveCustomers() {
+        DispatchQueue.global(qos: .background).async {
+            if let encoded = try? JSONEncoder().encode(self.customers) {
+                DispatchQueue.main.async {
+                    self.userDefaults.set(encoded, forKey: self.customersKey)
+                }
+            }
         }
     }
     
@@ -234,8 +238,8 @@ class CustomerManager: ObservableObject {
            let decoded = try? JSONDecoder().decode([Customer].self, from: data) {
             customers = decoded
         } else {
-            // Add sample data for demonstration
-            loadSampleData()
+            // Start with empty customer list
+            customers = []
         }
     }
     

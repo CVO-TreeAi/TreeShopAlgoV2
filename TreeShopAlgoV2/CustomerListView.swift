@@ -46,8 +46,7 @@ struct CustomerListView: View {
                 .environmentObject(customerManager)
         }
         .sheet(item: $selectedCustomer) { customer in
-            // CustomerDetailView(customer: customer, customerManager: customerManager)
-            Text("Customer Details - \(customer.fullName)")
+            CustomerDetailView(customer: customer, customerManager: customerManager)
         }
         .actionSheet(isPresented: $showingFilters) {
             ActionSheet(

@@ -521,7 +521,7 @@ struct AddEditCustomerView: View {
                     .onSubmit {
                         searchForAddress(text.wrappedValue)
                     }
-                    .onChange(of: text.wrappedValue) { newValue in
+                    .onChange(of: text.wrappedValue) { oldValue, newValue in
                         if newValue.count > 5 {
                             searchForAddress(newValue)
                         }
